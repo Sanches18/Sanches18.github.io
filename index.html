@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>OS Manutenção · Painel</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#12171d;
+    --surface:#1b232b;
+    --surface-2:#232d37;
+    --border:#2e3944;
+    --text:#eef2f6;
+    --text-muted:#8a97a6;
+    --text-faint:#5f6b78;
+    --urgent:#e2483d;
+    --urgent-bg:rgba(226,72,61,0.14);
+    --important:#e8a33d;
+    --important-bg:rgba(232,163,61,0.14);
+    --normal:#4fa88a;
+    --normal-bg:rgba(79,168,138,0.14);
+    --accent:#4c8dff;
+    --stop-bg:rgba(226,72,61,0.10);
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--bg);
+    color:var(--text);
+    font-family:'Inter',sans-serif;
+    min-height:100vh;
+    padding-bottom:40px;
+  }
+  .mono{font-family:'JetBrains Mono',monospace;}
+  .display{font-family:'Oswald',sans-serif;text-transform:uppercase;letter-spacing:0.02em;}
+
+  /* Header */
+  header{
+    position:sticky;top:0;z-index:20;
+    background:linear-gradient(180deg,#12171d 0%, #12171dee 85%, transparent 100%);
+    backdrop-filter:blur(6px);
+    padding:18px 16px 10px;
+  }
+  .brand{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;}
+  .brand-title{display:flex;align-items:center;gap:10px;}
+  .brand-mark{
+    width:34px;height:34px;border-radius:8px;
+    background:var(--surface-2);border:1px solid var(--border);
+    display:flex;align-items:center;justify-content:center;
+    color:var(--important);font-family:'Oswald',sans-serif;font-weight:700;font-size:15px;
+  }
+  .brand-title h1{font-size:17px;margin:0;font-weight:600;}
+  .brand-title p{margin:1px 0 0;font-size:11.5px;color:var(--text-muted);}
+  .icon-btn{
+    width:36px;height:36px;border-radius:9px;border:1px solid var(--border);
+    background:var(--surface);color:var(--text-muted);
+    display:flex;align-items:center;justify-content:center;cursor:pointer;
+  }
+  .icon-btn:active{background:var(--surface-2);}
+
+  /* Status strip */
+  .status-strip{display:flex;align-items:center;gap:8px;margin-bottom:12px;font-size:11.5px;color:var(--text-faint);}
+  .dot{width:6px;height:6px;border-radius:50%;background:var(--normal);flex-shrink:0;}
+  .dot.err{background:var(--urgent);}
+  .dot.loading{background:var(--important);animation:pulse 1.1s infinite;}
+  @keyframes pulse{0%,100%{opacity:1;}50%{opacity:.3;}}
+
+  /* Filters */
+  .filters{display:flex;gap:8px;overflow-x:auto;padding-bottom:2px;scrollbar-width:none;}
+  .filters::-webkit-scrollbar{display:none;}
+  select, .search-wrap{
+    flex-shrink:0;
+    background:var(--surface);
+    border:1px solid var(--border);
+    color:var(--text);
+    border-radius:9px;
+    padding:9px 12px;
+    font-size:13px;
+    font-family:'Inter',sans-serif;
+  }
+  select{appearance:none;-webkit-appearance:none;background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6'><path d='M0 0L5 6L10 0Z' fill='%238a97a6'/></svg>");background-repeat:no-repeat;background-position:right 10px center;padding-right:26px;}
+  .search-wrap{flex:1;min-width:140px;display:flex;align-items:center;gap:6px;}
+  .search-wrap input{background:none;border:none;color:var(--text);font-size:13px;width:100%;outline:none;font-family:'Inter',sans-serif;}
+  .search-wrap svg{flex-shrink:0;opacity:0.5;}
+
+  /* Summary chips */
+  .chips{display:flex;gap:8px;margin-top:12px;overflow-x:auto;scrollbar-width:none;}
+  .chips::-webkit-scrollbar{display:none;}
+  .chip{
+    flex-shrink:0;
+    padding:8px 12px;border-radius:9px;
+    background:var(--surface);border:1px solid var(--border);
+    font-size:12px;color:var(--text-muted);
+    display:flex;align-items:center;gap:6px;
+  }
+  .chip b{color:var(--text);font-family:'JetBrains Mono',monospace;}
+  .chip.urgent-chip{border-color:rgba(226,72,61,0.4);}
+  .chip.urgent-chip b{color:var(--urgent);}
+
+  /* List */
+  main{padding:14px 16px 0;max-width:640px;margin:0 auto;}
+  .list{display:flex;flex-direction:column;gap:10px;}
+
+  .card{
+    position:relative;
+    background:var(--surface);
+    border:1px solid var(--border);
+    border-radius:12px;
+    display:flex;
+    overflow:hidden;
+    animation:fadeIn .35s ease both;
+  }
+  @keyframes fadeIn{from{opacity:0;transform:translateY(4px);}to{opacity:1;transform:translateY(0);}}
+
+  .card-stub{
+    width:64px;flex-shrink:0;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    padding:10px 4px;
+    background:var(--surface-2);
+    border-right:1.5px dashed var(--border);
+    position:relative;
+  }
+  .card-stub .os-id{font-size:13px;font-weight:700;line-height:1.1;text-align:center;}
+  .card-stub .os-label{font-size:8.5px;color:var(--text-faint);letter-spacing:.06em;margin-top:2px;}
+  .card-stub::before, .card-stub::after{
+    content:'';position:absolute;left:-6px;width:12px;height:12px;border-radius:50%;
+    background:var(--bg);
+  }
+  .card-stub::before{top:-6px;}
+  .card-stub::after{bottom:-6px;}
+
+  .card-body{flex:1;padding:12px 12px 11px;min-width:0;}
+  .card-top{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:4px;}
+  .equip{font-size:14.5px;font-weight:600;line-height:1.25;}
+  .badge{
+    flex-shrink:0;font-size:10px;font-weight:700;padding:3px 8px;border-radius:20px;
+    text-transform:uppercase;letter-spacing:.03em;white-space:nowrap;
+  }
+  .badge.urgent{background:var(--urgent-bg);color:var(--urgent);}
+  .badge.important{background:var(--important-bg);color:var(--important);}
+  .badge.normal{background:var(--normal-bg);color:var(--normal);}
+
+  .desc{font-size:12.5px;color:var(--text-muted);line-height:1.4;margin:2px 0 8px;}
+  .desc.clamp{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+  .desc.expanded{-webkit-line-clamp:unset;}
+
+  .meta-row{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center;}
+  .meta{display:flex;align-items:center;gap:4px;font-size:11px;color:var(--text-faint);}
+  .meta svg{opacity:.6;flex-shrink:0;}
+  .meta.local{color:var(--accent);font-weight:600;}
+  .meta.stop{color:var(--urgent);font-weight:600;}
+
+  .empty, .loading-state, .error-state{
+    text-align:center;padding:60px 20px;color:var(--text-muted);
+  }
+  .empty svg, .error-state svg{opacity:.4;margin-bottom:10px;}
+  .empty h3, .error-state h3{color:var(--text);font-size:15px;margin:0 0 4px;}
+  .empty p, .error-state p{font-size:12.5px;margin:0;line-height:1.5;}
+  .retry-btn{
+    margin-top:14px;background:var(--surface-2);border:1px solid var(--border);color:var(--text);
+    padding:9px 18px;border-radius:9px;font-size:13px;cursor:pointer;
+  }
+
+  .skeleton{background:var(--surface);border:1px solid var(--border);border-radius:12px;height:82px;overflow:hidden;position:relative;}
+  .skeleton::after{
+    content:'';position:absolute;inset:0;
+    background:linear-gradient(90deg,transparent,rgba(255,255,255,0.04),transparent);
+    animation:shimmer 1.4s infinite;
+  }
+  @keyframes shimmer{from{transform:translateX(-100%);}to{transform:translateX(100%);}}
+
+  /* Modal / settings */
+  .modal-overlay{
+    position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:50;
+    display:flex;align-items:flex-end;justify-content:center;
+  }
+  .modal{
+    background:var(--surface);border:1px solid var(--border);
+    border-radius:16px 16px 0 0;padding:20px 18px 26px;width:100%;max-width:640px;
+  }
+  .modal h2{font-size:15px;margin:0 0 4px;}
+  .modal p{font-size:12px;color:var(--text-muted);margin:0 0 14px;line-height:1.5;}
+  .modal input{
+    width:100%;background:var(--surface-2);border:1px solid var(--border);color:var(--text);
+    padding:11px 12px;border-radius:9px;font-size:13px;font-family:'JetBrains Mono',monospace;margin-bottom:10px;
+  }
+  .modal-actions{display:flex;gap:8px;margin-top:6px;}
+  .modal-actions button{
+    flex:1;padding:11px;border-radius:9px;border:1px solid var(--border);font-size:13px;font-weight:600;cursor:pointer;
+  }
+  .btn-primary{background:var(--accent);color:#fff;border-color:var(--accent) !important;}
+  .btn-secondary{background:none;color:var(--text-muted);}
+  .conn-msg{font-size:11.5px;margin-top:2px;margin-bottom:10px;}
+  .conn-msg.ok{color:var(--normal);}
+  .conn-msg.fail{color:var(--urgent);}
+
+  ::selection{background:var(--accent);color:#fff;}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">
+    <div class="brand-title">
+      <div class="brand-mark">OS</div>
+      <div>
+        <h1>Ordens de Serviço</h1>
+        <p id="lastUpdated">Manutenção · carregando…</p>
+      </div>
+    </div>
+    <div class="icon-btn" id="settingsBtn" title="Configurar fonte de dados">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+    </div>
+  </div>
+
+  <div class="status-strip">
+    <span class="dot loading" id="statusDot"></span>
+    <span id="statusText">Conectando à planilha…</span>
+  </div>
+
+  <div class="filters">
+    <select id="filterGalpao"><option value="">Todos os galpões</option></select>
+    <select id="filterPrioridade">
+      <option value="">Toda prioridade</option>
+      <option value="Urgente!">Urgente</option>
+      <option value="Importante">Importante</option>
+    </select>
+    <select id="filterStatus">
+      <option value="aberta">Em aberto</option>
+      <option value="">Todos os status</option>
+    </select>
+    <div class="search-wrap">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+      <input type="text" id="searchInput" placeholder="Buscar máquina, ID, serviço…">
+    </div>
+  </div>
+
+  <div class="chips" id="chipsRow"></div>
+</header>
+
+<main>
+  <div class="list" id="list">
+    <div class="skeleton"></div>
+    <div class="skeleton"></div>
+    <div class="skeleton"></div>
+  </div>
+</main>
+
+<!-- Settings Modal -->
+<div class="modal-overlay" id="modalOverlay" style="display:none;">
+  <div class="modal">
+    <h2>Fonte de dados</h2>
+    <p>Os dados são carregados automaticamente pela API local.</p>
+    <input
+    type="text"
+    id="urlInput"
+    value="http://127.0.0.1:8000/os"
+    readonly
+>
+    <div id="connMsg"></div>
+    <div class="modal-actions">
+      <button class="btn-secondary" id="closeModalBtn">Fechar</button>
+      <button class="btn-primary" id="testSaveBtn">Testar e salvar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  const STORAGE_KEY = 'os_manutencao_data_url';
+  const CACHE_KEY = 'os_manutencao_cache';
+
+  let allRows = [];
+  let expandedIds = new Set();
+
+  const el = (id) => document.getElementById(id);
+  const listEl = el('list');
+  const statusDot = el('statusDot');
+  const statusText = el('statusText');
+  const lastUpdated = el('lastUpdated');
+
+  function getDataUrl(){
+    return "http://127.0.0.1:8000/os";
+}
+  function setDataUrl(u){
+    // Não faz nada
+}
+
+  // ---- Field helpers (Excel column names, accents included) ----
+  function f(row, name){ return row && row[name] !== undefined && row[name] !== null ? String(row[name]).trim() : ''; }
+  function getLocal(row){ return f(row,'Local'); }
+  function getEquip(row){ return f(row,'Equipamento'); }
+  function getDesc(row){ return f(row,'Descrição do Serviço'); }
+  function getPrioridade(row){ return f(row,'Prioridade'); }
+  function getStatus(row){ return f(row,'Status'); }
+  function getIdOS(row){ return f(row,'ID OS'); }
+  function getTempo(row){ return f(row,'Tempo Estimado'); }
+  function getParada(row){ return f(row,'Necessário parada de máquina?'); }
+  function getPessoas(row){ return f(row,'Quantas pessoas para a realização do serviço?'); }
+  function getMateriais(row){ return f(row,'Materiais Necessários'); }
+  function getDataCriacao(row){ return f(row,'Data Criação OS'); }
+  function getDataProg(row){ return f(row,'Data Programação'); }
+  function getExecucao(row){ return f(row,'Execução'); }
+
+  function parseBRDate(s){
+    if(!s) return null;
+    const m = s.match(/(\d{1,2})\/(\d{1,2})\/(\d{2,4})/);
+    if(!m) return null;
+    let [_, d, mo, y] = m;
+    if(y.length===2) y = '20'+y;
+    return new Date(+y, +mo-1, +d);
+  }
+
+  function priorityRank(p){
+    if(p === 'Urgente!') return 0;
+    if(p === 'Importante') return 1;
+    return 2;
+  }
+
+  function isAberta(status){
+    const s = (status||'').toUpperCase();
+    return s.includes('PROGRAMADA') || s.includes('ABERTA') || s.includes('PENDENTE') || s === '';
+  }
+
+  // ---- Rendering ----
+  function renderFilters(){
+    const galpaoSel = el('filterGalpao');
+    const existing = new Set(Array.from(galpaoSel.options).map(o=>o.value));
+    const galpoes = Array.from(new Set(allRows.map(getLocal).filter(Boolean))).sort();
+    galpoes.forEach(g=>{
+      if(!existing.has(g)){
+        const opt = document.createElement('option');
+        opt.value = g; opt.textContent = g;
+        galpaoSel.appendChild(opt);
+      }
+    });
+  }
+
+  function currentFilters(){
+    return {
+      galpao: el('filterGalpao').value,
+      prioridade: el('filterPrioridade').value,
+      status: el('filterStatus').value,
+      q: el('searchInput').value.trim().toLowerCase()
+    };
+  }
+
+  function applyFilters(){
+    const {galpao, prioridade, status, q} = currentFilters();
+    let rows = allRows.slice();
+
+    if(status === 'aberta') rows = rows.filter(r=>isAberta(getStatus(r)));
+    if(galpao) rows = rows.filter(r=>getLocal(r)===galpao);
+    if(prioridade) rows = rows.filter(r=>getPrioridade(r)===prioridade);
+    if(q){
+      rows = rows.filter(r=>{
+        return (getEquip(r)+' '+getDesc(r)+' '+getIdOS(r)+' '+getLocal(r)).toLowerCase().includes(q);
+      });
+    }
+
+    rows.sort((a,b)=>{
+      const pr = priorityRank(getPrioridade(a)) - priorityRank(getPrioridade(b));
+      if(pr!==0) return pr;
+      const da = parseBRDate(getDataCriacao(a));
+      const db = parseBRDate(getDataCriacao(b));
+      if(da && db) return db - da;
+      return 0;
+    });
+
+    return rows;
+  }
+
+  function renderChips(){
+    const rows = allRows.filter(r=>isAberta(getStatus(r)));
+    const total = rows.length;
+    const urgentes = rows.filter(r=>getPrioridade(r)==='Urgente!').length;
+    const galpaoCounts = {};
+    rows.forEach(r=>{ const g=getLocal(r)||'—'; galpaoCounts[g]=(galpaoCounts[g]||0)+1; });
+
+    const chipsRow = el('chipsRow');
+    chipsRow.innerHTML = '';
+    const chipTotal = document.createElement('div');
+    chipTotal.className = 'chip';
+    chipTotal.innerHTML = '<b>'+total+'</b> em aberto';
+    chipsRow.appendChild(chipTotal);
+
+    if(urgentes>0){
+      const chipUrg = document.createElement('div');
+      chipUrg.className = 'chip urgent-chip';
+      chipUrg.innerHTML = '<b>'+urgentes+'</b> urgentes';
+      chipsRow.appendChild(chipUrg);
+    }
+
+    Object.keys(galpaoCounts).sort().forEach(g=>{
+      const c = document.createElement('div');
+      c.className='chip';
+      c.innerHTML = '<b>'+galpaoCounts[g]+'</b> '+g;
+      chipsRow.appendChild(c);
+    });
+  }
+
+  function badgeClass(p){
+    if(p==='Urgente!') return 'urgent';
+    if(p==='Importante') return 'important';
+    return 'normal';
+  }
+
+  function cardHTML(row, idx){
+    const id = getIdOS(row) || ('#'+idx);
+    const local = getLocal(row);
+    const equip = getEquip(row);
+    const desc = getDesc(row);
+    const prioridade = getPrioridade(row) || 'Normal';
+    const tempo = getTempo(row);
+    const parada = (getParada(row)||'').toUpperCase().startsWith('S');
+    const pessoas = getPessoas(row);
+    const dataCriacao = getDataCriacao(row);
+    const bClass = badgeClass(prioridade);
+    const expanded = expandedIds.has(id);
+
+    return `
+      <div class="card" data-id="${id}">
+        <div class="card-stub">
+          <div class="os-id mono">${id}</div>
+          <div class="os-label">OS</div>
+        </div>
+        <div class="card-body">
+          <div class="card-top">
+            <div class="equip">${equip || 'Equipamento não informado'}</div>
+            <span class="badge ${bClass}">${prioridade==='Urgente!'?'Urgente':prioridade}</span>
+          </div>
+          <div class="desc ${expanded?'expanded':'clamp'}" data-toggle="${id}">${desc || 'Sem descrição.'}</div>
+          <div class="meta-row">
+            ${local?`<span class="meta local">📍 ${local}</span>`:''}
+            ${dataCriacao?`<span class="meta">🗓 ${dataCriacao}</span>`:''}
+            ${tempo?`<span class="meta">⏱ ${tempo}</span>`:''}
+            ${pessoas?`<span class="meta">👥 ${pessoas}</span>`:''}
+            ${parada?`<span class="meta stop">⚠ Parada de máquina</span>`:''}
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  function renderList(){
+    const rows = applyFilters();
+    renderChips();
+
+    if(rows.length===0){
+      listEl.innerHTML = `
+        <div class="empty">
+          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+          <h3>Nada por aqui</h3>
+          <p>Nenhuma OS encontrada com esses filtros.</p>
+        </div>`;
+      return;
+    }
+
+    listEl.innerHTML = rows.map((r,i)=>cardHTML(r,i)).join('');
+
+    listEl.querySelectorAll('[data-toggle]').forEach(node=>{
+      node.addEventListener('click', ()=>{
+        const id = node.getAttribute('data-toggle');
+        if(expandedIds.has(id)) expandedIds.delete(id); else expandedIds.add(id);
+        renderList();
+      });
+    });
+  }
+
+  function setStatus(state, msg){
+    statusDot.className = 'dot ' + (state==='ok'?'':state);
+    statusText.textContent = msg;
+  }
+
+  // ---- Data fetching ----
+  async function fetchData(showLoading){
+    const url = getDataUrl();
+    if(false){
+      setStatus('err', 'Nenhuma fonte de dados configurada — toque no ⚙ para configurar.');
+      const cached = localStorage.getItem(CACHE_KEY);
+      if(cached){ allRows = JSON.parse(cached); renderFilters(); renderList(); }
+      else {
+        listEl.innerHTML = `
+          <div class="error-state">
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
+            <h3>Configuração pendente</h3>
+            <p>Toque no ícone de engrenagem no topo e cole a URL do Flow do Power Automate.</p>
+          </div>`;
+      }
+      return;
+    }
+
+    if(showLoading) setStatus('loading', 'Atualizando…');
+    try{
+      const resp = await fetch(url, {cache:'no-store'});
+      if(!resp.ok) throw new Error('HTTP '+resp.status);
+      const data = await resp.json();
+      const rows = Array.isArray(data) ? data : (data.value || []);
+      allRows = rows;
+      localStorage.setItem(CACHE_KEY, JSON.stringify(rows));
+      renderFilters();
+      renderList();
+      const now = new Date();
+      lastUpdated.textContent = 'Atualizado às ' + now.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+      setStatus('', 'Conectado à planilha');
+    }catch(err){
+      console.error(err);
+      const cached = localStorage.getItem(CACHE_KEY);
+      if(cached){
+        allRows = JSON.parse(cached);
+        renderFilters();
+        renderList();
+        setStatus('err', 'Sem conexão — mostrando última versão salva');
+      } else {
+        setStatus('err', 'Não foi possível carregar os dados');
+        listEl.innerHTML = `
+          <div class="error-state">
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
+            <h3>Erro ao carregar</h3>
+            <p>Verifique a conexão ou a URL configurada.</p>
+            <button class="retry-btn" id="retryBtn">Tentar novamente</button>
+          </div>`;
+        const rb = document.getElementById('retryBtn');
+        if(rb) rb.addEventListener('click', ()=>fetchData(true));
+      }
+    }
+  }
+
+  // ---- Modal / settings ----
+  function openModal(){
+    el('urlInput').value = getDataUrl();
+    el('connMsg').textContent = '';
+    el('connMsg').className = 'conn-msg';
+    el('modalOverlay').style.display = 'flex';
+  }
+  function closeModal(){ el('modalOverlay').style.display = 'none'; }
+
+  el('settingsBtn').addEventListener('click', openModal);
+  el('closeModalBtn').addEventListener('click', closeModal);
+  el('modalOverlay').addEventListener('click', (e)=>{ if(e.target.id==='modalOverlay') closeModal(); });
+
+  el('testSaveBtn').addEventListener('click', async ()=>{
+    const url = el('urlInput').value.trim();
+    const msg = el('connMsg');
+    if(!url){ msg.textContent='Cole uma URL válida.'; msg.className='conn-msg fail'; return; }
+    msg.textContent = 'Testando conexão…'; msg.className='conn-msg';
+    try{
+      const resp = await fetch(url, {cache:'no-store'});
+      if(!resp.ok) throw new Error('HTTP '+resp.status);
+      const data = await resp.json();
+      const rows = Array.isArray(data) ? data : (data.value || []);
+      msg.textContent = 'Conectado! '+rows.length+' OS(s) encontradas.';
+      msg.className = 'conn-msg ok';
+      setDataUrl(url);
+      setTimeout(()=>{ closeModal(); fetchData(true); }, 700);
+    }catch(err){
+      msg.textContent = 'Falha na conexão. Confira a URL e tente de novo.';
+      msg.className = 'conn-msg fail';
+    }
+  });
+
+  // ---- Filter events ----
+  ['filterGalpao','filterPrioridade','filterStatus'].forEach(id=>{
+    el(id).addEventListener('change', renderList);
+  });
+  el('searchInput').addEventListener('input', renderList);
+
+  // ---- Init ----
+  fetchData(true);
+  setInterval(()=>fetchData(false), 5*60*1000); // auto-refresh a cada 5 min
+})();
+</script>
+</body>
+</html>
