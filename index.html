@@ -257,7 +257,7 @@
    <input
     type="text"
     id="urlInput"
-    value="http://192.168.2.218:8000/os" 
+    value="https://snoring-captivate-snugly.ngrok-free.dev/os" 
     readonly
 >
     <div id="connMsg"></div>
@@ -270,7 +270,6 @@
 
 <script>
 (function(){
-  const STORAGE_KEY = 'os_manutencao_data_url';
   const CACHE_KEY = 'os_manutencao_cache';
 
   let allRows = [];
@@ -282,14 +281,12 @@
   const statusText = el('statusText');
   const lastUpdated = el('lastUpdated');
 
+  // Definição direta e fixa da URL da API Ngrok
   function getDataUrl(){
-    return "http://192.168.2.218:8000/os";
-}
-  function setDataUrl(u){
-    // Não faz nada
-}
+    return "https://snoring-captivate-snugly.ngrok-free.dev/os";
+  }
 
-  // ---- Field helpers (Excel column names, accents included) ----
+  // ---- Field helpers ----
   function f(row, name){ return row && row[name] !== undefined && row[name] !== null ? String(row[name]).trim() : ''; }
   function getLocal(row){ return f(row,'Local'); }
   function getEquip(row){ return f(row,'Equipamento'); }
@@ -302,8 +299,6 @@
   function getPessoas(row){ return f(row,'Quantas pessoas para a realização do serviço?'); }
   function getMateriais(row){ return f(row,'Materiais Necessários'); }
   function getDataCriacao(row){ return f(row,'Data Criação OS'); }
-  function getDataProg(row){ return f(row,'Data Programação'); }
-  function getExecucao(row){ return f(row,'Execução'); }
 
   function parseBRDate(s){
     if(!s) return null;
@@ -320,9 +315,10 @@
     return 2;
   }
 
+  style = isAberta;
   function isAberta(status){
     const s = (status||'').toUpperCase();
-    return s.includes('PROGRAMADA') || s.includes('ABERTA') || s.includes('PENDENTE') || s === '';
+    return s.includes('PROGRAMADA') || s.includes('ABERTA') || s.includes('PENDENTE') || s.includes('EXECUÇÃO') || s === '';
   }
 
   // ---- Rendering ----
@@ -351,7 +347,6 @@
   function applyFilters(){
     const {galpao, prioridade, status, q} = currentFilters();
     let rows = allRows.slice();
-
     if(status === 'aberta') rows = rows.filter(r=>isAberta(getStatus(r)));
     if(galpao) rows = rows.filter(r=>getLocal(r)===galpao);
     if(prioridade) rows = rows.filter(r=>getPrioridade(r)===prioridade);
@@ -369,7 +364,6 @@
       if(da && db) return db - da;
       return 0;
     });
-
     return rows;
   }
 
@@ -386,7 +380,6 @@
     chipTotal.className = 'chip';
     chipTotal.innerHTML = '<b>'+total+'</b> em aberto';
     chipsRow.appendChild(chipTotal);
-
     if(urgentes>0){
       const chipUrg = document.createElement('div');
       chipUrg.className = 'chip urgent-chip';
@@ -420,7 +413,6 @@
     const dataCriacao = getDataCriacao(row);
     const bClass = badgeClass(prioridade);
     const expanded = expandedIds.has(id);
-
     return `
       <div class="card" data-id="${id}">
         <div class="card-stub">
@@ -448,7 +440,6 @@
   function renderList(){
     const rows = applyFilters();
     renderChips();
-
     if(rows.length===0){
       listEl.innerHTML = `
         <div class="empty">
@@ -478,21 +469,6 @@
   // ---- Data fetching ----
   async function fetchData(showLoading){
     const url = getDataUrl();
-    if(false){
-      setStatus('err', 'Nenhuma fonte de dados configurada — toque no ⚙ para configurar.');
-      const cached = localStorage.getItem(CACHE_KEY);
-      if(cached){ allRows = JSON.parse(cached); renderFilters(); renderList(); }
-      else {
-        listEl.innerHTML = `
-          <div class="error-state">
-            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
-            <h3>Configuração pendente</h3>
-            <p>Toque no ícone de engrenagem no topo e cole a URL do Flow do Power Automate.</p>
-          </div>`;
-      }
-      return;
-    }
-
     if(showLoading) setStatus('loading', 'Atualizando…');
     try{
       const resp = await fetch(url, {cache:'no-store'});
@@ -520,7 +496,7 @@
           <div class="error-state">
             <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
             <h3>Erro ao carregar</h3>
-            <p>Verifique a conexão ou a URL configurada.</p>
+            <p>Verifique se a API local e o Ngrok estão ligados.</p>
             <button class="retry-btn" id="retryBtn">Tentar novamente</button>
           </div>`;
         const rb = document.getElementById('retryBtn');
@@ -529,11 +505,11 @@
     }
   }
 
-  // ---- Modal / settings ----
+  // ---- Modal Simplificado ----
   function openModal(){
     el('urlInput').value = getDataUrl();
-    el('connMsg').textContent = '';
-    el('connMsg').className = 'conn-msg';
+    el('connMsg').textContent = 'A URL está configurada diretamente no código do GitHub.';
+    el('connMsg').className = 'conn-msg ok';
     el('modalOverlay').style.display = 'flex';
   }
   function closeModal(){ el('modalOverlay').style.display = 'none'; }
@@ -542,24 +518,10 @@
   el('closeModalBtn').addEventListener('click', closeModal);
   el('modalOverlay').addEventListener('click', (e)=>{ if(e.target.id==='modalOverlay') closeModal(); });
 
-  el('testSaveBtn').addEventListener('click', async ()=>{
-    const url = el('urlInput').value.trim();
-    const msg = el('connMsg');
-    if(!url){ msg.textContent='Cole uma URL válida.'; msg.className='conn-msg fail'; return; }
-    msg.textContent = 'Testando conexão…'; msg.className='conn-msg';
-    try{
-      const resp = await fetch(url, {cache:'no-store'});
-      if(!resp.ok) throw new Error('HTTP '+resp.status);
-      const data = await resp.json();
-      const rows = Array.isArray(data) ? data : (data.value || []);
-      msg.textContent = 'Conectado! '+rows.length+' OS(s) encontradas.';
-      msg.className = 'conn-msg ok';
-      setDataUrl(url);
-      setTimeout(()=>{ closeModal(); fetchData(true); }, 700);
-    }catch(err){
-      msg.textContent = 'Falha na conexão. Confira a URL e tente de novo.';
-      msg.className = 'conn-msg fail';
-    }
+  // Apenas fecha o modal já que a URL mudou no código
+  el('testSaveBtn').addEventListener('click', ()=>{
+     closeModal();
+     fetchData(true);
   });
 
   // ---- Filter events ----
@@ -570,7 +532,7 @@
 
   // ---- Init ----
   fetchData(true);
-  setInterval(()=>fetchData(false), 5*60*1000); // auto-refresh a cada 5 min
+  setInterval(()=>fetchData(false), 5*60*1000);
 })();
 </script>
 </body>
