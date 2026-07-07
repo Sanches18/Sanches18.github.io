@@ -249,17 +249,16 @@
   </div>
 </main>
 
-<!-- Settings Modal -->
 <div class="modal-overlay" id="modalOverlay" style="display:none;">
   <div class="modal">
     <h2>Fonte de dados</h2>
-    <p>Os dados são carregados automaticamente pela API local.</p>
-   <input
-    type="text"
-    id="urlInput"
-    value="https://snoring-captivate-snugly.ngrok-free.dev/os" 
-    readonly
->
+    <p>Os dados são carregados automaticamente pela API local via Ngrok.</p>
+    <input
+      type="text"
+      id="urlInput"
+      value="https://snoring-captivate-snugly.ngrok-free.dev/os" 
+      readonly
+    >
     <div id="connMsg"></div>
     <div class="modal-actions">
       <button class="btn-secondary" id="closeModalBtn">Fechar</button>
@@ -281,7 +280,6 @@
   const statusText = el('statusText');
   const lastUpdated = el('lastUpdated');
 
-  // Definição direta e fixa da URL da API Ngrok
   function getDataUrl(){
     return "https://snoring-captivate-snugly.ngrok-free.dev/os";
   }
@@ -315,7 +313,6 @@
     return 2;
   }
 
-  style = isAberta;
   function isAberta(status){
     const s = (status||'').toUpperCase();
     return s.includes('PROGRAMADA') || s.includes('ABERTA') || s.includes('PENDENTE') || s.includes('EXECUÇÃO') || s === '';
@@ -466,12 +463,17 @@
     statusText.textContent = msg;
   }
 
-  // ---- Data fetching ----
+  // ---- Data fetching (Com Bypass do Ngrok e URL Fixa) ----
   async function fetchData(showLoading){
     const url = getDataUrl();
     if(showLoading) setStatus('loading', 'Atualizando…');
     try{
-      const resp = await fetch(url, {cache:'no-store'});
+      const resp = await fetch(url, {
+        cache: 'no-store',
+        headers: {
+          'ngrok-skip-browser-warning': 'true' // Ignora o aviso do Ngrok
+        }
+      });
       if(!resp.ok) throw new Error('HTTP '+resp.status);
       const data = await resp.json();
       const rows = Array.isArray(data) ? data : (data.value || []);
@@ -518,7 +520,6 @@
   el('closeModalBtn').addEventListener('click', closeModal);
   el('modalOverlay').addEventListener('click', (e)=>{ if(e.target.id==='modalOverlay') closeModal(); });
 
-  // Apenas fecha o modal já que a URL mudou no código
   el('testSaveBtn').addEventListener('click', ()=>{
      closeModal();
      fetchData(true);
