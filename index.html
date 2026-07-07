@@ -254,10 +254,10 @@
   <div class="modal">
     <h2>Fonte de dados</h2>
     <p>Os dados são carregados automaticamente pela API local.</p>
-    <input
+   <input
     type="text"
     id="urlInput"
-    value="http://127.0.0.1:8000/os"
+    value="http://192.168.2.218:8000/os" 
     readonly
 >
     <div id="connMsg"></div>
@@ -283,7 +283,7 @@
   const lastUpdated = el('lastUpdated');
 
   function getDataUrl(){
-    return "http://127.0.0.1:8000/os";
+    return "http://192.168.2.218:8000/os";
 }
   function setDataUrl(u){
     // Não faz nada
